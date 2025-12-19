@@ -3,8 +3,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { JWT_SECRET } = require("../config");
 const { validateSignup, validateSignin, validateUpdateInfo, authMiddleware } = require("../middlewares/middlewares");
-const { User } = require("../database");
-
+const { User, Account } = require("../database");
 
 const router = express.Router();
 
@@ -38,6 +37,12 @@ router.post("/signup", validateSignup, async function(req, res) {
             userId : dbUser._id
         }, JWT_SECRET);
 
+        // Initialize balances on signup
+        await Account.create({
+            userId : dbUser._id,
+            balance : 1 + Math.random() * 10000
+        });
+
         res.status(201).json({
             msg : "User created succesfully :)",
             token : token
@@ -55,16 +60,22 @@ router.post("/signup", validateSignup, async function(req, res) {
 // user signin route
 router.post("/signin", validateSignin, async function(req, res) {
     const payload = req.body;
-    const hashedPassword = await bcrypt.hash(payload.password, 10);
 
     const user = await User.findOne({
-        username : payload.username,
-        password : hashedPassword
+        username : payload.username
     });
 
     if(!user) {
-        return res.status(500).json({
-            msg : "Something went wrong while login :("
+        return res.status(400).json({
+            msg : "User Not found :("
+        });
+    }
+
+    const isMatch = await bcrypt.compare(payload.password, user.password);
+    
+    if(!isMatch) {
+        return res.status(400).json({
+            msg : "Wrong Password :("
         });
     }
 
@@ -97,6 +108,27 @@ router.put("/update", authMiddleware, validateUpdateInfo, async function(req, re
             msg : "Something went wrong while updation :("
         });
     }
+})
+
+router.get("/bulk", async function(req, res) {
+    const filter = req.query.filter || "";
+
+    const users = await User.find({
+        $or : [{
+            first_name : { $regex : filter }
+        }, {
+            last_name : { $regex : filter }
+        }]
+    });
+
+    res.json({
+        users : users.map((user) => ({
+            username : user.username,
+            first_name : user.first_name,
+            last_name : user.last_name,
+            _id : user._id
+        }))
+    });
 })
 
 module.exports = {

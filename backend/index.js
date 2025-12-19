@@ -4,8 +4,10 @@ const express = require("express");
 const cors = require("cors");
 const { connectDB } = require("./database");
 const app = express();
-
 const port = 3000;
+
+// Import main router
+const { router : mainRouter } = require("./routes/mainRouter");
 
 // Add cors
 app.use(cors());
@@ -16,10 +18,7 @@ connectDB();
 // Add body parser
 app.use(express.json());
 
-// Import main router
-const { router : mainRouter } = require("./routes/mainRouter");
-const { connect } = require("mongoose");
-
+// Handle requests
 app.use("/api/v1", mainRouter);
 
 // Handle unknow route

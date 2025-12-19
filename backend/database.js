@@ -46,11 +46,11 @@ const userSchema = mongo.Schema({
     }
 });
 
-// Account schema
+// Account schema Add backend auth routes
 const accountSchema = mongo.Schema({
     userId : {
         type : mongo.Schema.Types.ObjectId,
-        res : 'User',
+        ref : 'User',
         required : true
     },
     balance : {
